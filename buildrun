@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mvn package
+mvn assembly:assembly
+java -jar ./target/quotesparser-0.1-jar-with-dependencies.jar
