@@ -5,6 +5,7 @@ package pchel.quotesparser {
   import org.ccil.cowan.tagsoup.jaxp.SAXFactoryImpl
   import scala.actors.Actor
   import scala.util.matching.Regex
+  import pchel.planerizer.QuoteGraph
 
   abstract class ParserMessage
   case class ParseTask(data: (String, NodeSeq => NodeSeq, Node => String, Node => String)) extends ParserMessage
@@ -46,8 +47,6 @@ package pchel.quotesparser {
       //private var storage = MongoConnection()("quotter")("quotes")
 
       def save(author: String, quote: String) {
-        val nouns = for((word, partOfSpeech) <- StemmerPorter.stemText(quote) if partOfSpeech == PartOfSpeech.Noun) yield StemmedResolver.getFullNoun(word)
-    	  println(author +" : " + quote + " : " + nouns)
     	  //storage.insert(MongoDBObject("author" -> author, "quote" -> quote))	
       }
 
