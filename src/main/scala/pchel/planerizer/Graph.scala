@@ -33,18 +33,17 @@ class Edge(_quoteNode : QuoteNode,var _weight : Int) {
 }
 
 class QuoteGraph {
-private class QuoteNodeImpl(_author : String, _quote : String) extends QuoteNode {
-  self : QuoteNode =>
-
+  
+private class QuoteNodeImpl(_author : String, _quote : String, _nouns : Seq[String]) extends QuoteNode {
+  self : QuoteNode =>  
   private val _relations : HashSet[ Edge ] = HashSet.empty
-  private val _nouns : Seq[String] = List.empty;//StemmedResolver.getNouns(quote)
   
   override def relations = _relations
   override def author = _author
   override def quote = _quote
   override def nouns = _nouns
 
-  override def toString() = author+" : "+quote+" - relations "+relations
+  override def toString() = author+" : "+quote+" "+nouns+" - relations "+relations
   override def equals(that : Any) = that match {
     case other : QuoteNode => this.author.equals(other.author) && this.quote.equals(other.quote)
     case _ => false
@@ -70,8 +69,8 @@ private class QuoteNodeImpl(_author : String, _quote : String) extends QuoteNode
 
   val nodes : HashSet[QuoteNode] = HashSet.empty
   
-  def addNode(author : String, quote : String) : QuoteNode = {
-    val newNode = new QuoteNodeImpl(author, quote)
+  def addNode(author : String, quote : String, tags : Seq[String]) : QuoteNode = {
+    val newNode = new QuoteNodeImpl(author, quote, tags)
     nodes.findEntry(newNode) match {
       case some : Some[QuoteNode] => some.get
       case None => {
@@ -89,7 +88,7 @@ private class QuoteNodeImpl(_author : String, _quote : String) extends QuoteNode
   }
   
   def getNode(node : QuoteNode) : Option[QuoteNode] = nodes.findEntry(node)
-  def getNode(author : String, quote : String) : Option[QuoteNode] = nodes.findEntry(new QuoteNodeImpl(author, quote))
+  def getNode(author : String, quote : String) : Option[QuoteNode] = nodes.findEntry(new QuoteNodeImpl(author, quote, List.empty))
   
   override def toString() = (for(node <- nodes) yield "\n"+node.toString).toString
 }

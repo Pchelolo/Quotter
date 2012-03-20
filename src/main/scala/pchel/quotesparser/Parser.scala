@@ -8,9 +8,17 @@ package pchel.quotesparser {
   import pchel.planerizer.QuoteGraph
 
   abstract class ParserMessage
-  case class ParseTask(data: (String, NodeSeq => NodeSeq, Node => String, Node => String)) extends ParserMessage
-  case class ParserResult(quotesList: Seq[(String, String)]) extends ParserMessage
+  case class ParseTask(data: Task) extends ParserMessage
+  case class ParserResult(quotesList: Seq[(String, String, Seq[String])]) extends ParserMessage
   case class ParserError(message: String) extends ParserMessage
+  
+  class Task(_url : String, _getBaseNode : NodeSeq => NodeSeq, _getAuthor : Node => String, _getQoute : Node => String, _getTags : Node => Seq[String]) {
+    def url = _url
+    def getBaseNode = _getBaseNode
+    def getAuthor = _getAuthor
+    def getQuote = _getQoute
+    def getTags = _getTags
+  }
 
   class ParserActor extends Actor {
     def act {
@@ -27,13 +35,12 @@ package pchel.quotesparser {
       XML.withSAXParser(new SAXFactoryImpl().newSAXParser()).load(connection.getInputStream)
     }
 
-    private def filterQuotes(task: (String, NodeSeq => NodeSeq, Node => String, Node => String)): ParserMessage = task match {
-      case (url, filtering, getAuthor, getQuote) =>
-        try {
-          val document = getDocument(url)
-          new ParserResult(for (element <- filtering(document)) yield (getAuthor(element), getQuote(element)))
+    private def filterQuotes(task: Task): ParserMessage = {
+       try {
+          val document = getDocument(task.url)
+          new ParserResult(for (element <- task.getBaseNode(document)) yield (task.getAuthor(element), task.getQuote(element), task.getTags(element)))
         } catch {
-          case e: java.net.UnknownHostException => new ParserError("Can`t reach host " + url)
+          case e: java.net.UnknownHostException => new ParserError("Can`t reach host " + task.url)
         }
     }
   }
@@ -49,15 +56,14 @@ package pchel.quotesparser {
       def save(author: String, quote: String) {
     	  //storage.insert(MongoDBObject("author" -> author, "quote" -> quote))	
       }
-
     }
 
-    private def clear(elem: (String, String)): (String, String) = {
+    private def clear(elem: (String, String, Seq[String])): (String, String, Seq[String]) = {
       elem match {
-        case (author, quote) =>
+        case (author, quote, tags) =>
           val noBraces = """\(.*?\)""".r
           val noEnters = """\n""".r
-          (noBraces.replaceAllIn(author, "").trim(), noEnters.replaceAllIn(quote, " "))
+          (noBraces.replaceAllIn(author, "").trim(), noEnters.replaceAllIn(quote, " "), tags)
       }
     }
 
@@ -65,7 +71,7 @@ package pchel.quotesparser {
       val g = new QuoteGraph
       (1 to Parser.tasksNumber) foreach (_ =>
         receive {
-          case ParserResult(quotesList) => for ((author, quote) <- quotesList.map(clear) if author.length + quote.length <= 137) g.addNode(author, quote)
+          case ParserResult(quotesList) => for ( (author, quote, tags) <- quotesList.map(clear) if author.length + quote.length <= 137) g.addNode(author, quote, tags)
           case ParserError(message) => error(message)
         })
         println(g)
@@ -81,18 +87,25 @@ package pchel.quotesparser {
       }
 
       def hasClass(value: String)(node: Node): Boolean = (node \ "@class").toString.contains(value)
+      def hasRel(value: String)(node: Node): Boolean = (node \ "@rel").toString.contains(value)
     }
 
-    private var tasks: List[(String, NodeSeq => NodeSeq, Node => String, Node => String)] = List.empty
-    private def createTasks() = {
+    private val tasks: List[Task] = createTasks
+    private def createTasks() : List[Task]= {
       import filters._
-
+      var temp_tasks = List.empty[Task]
       val url = "http://citaty.info/rating/best?page="
       val restriction = unite(hasClass("node-inner-3")_)_
       val author = (n: Node) => (n \\ "a").first.text
       val content = (n: Node) => (n \\ "p").first.text
-      (1 to 5) foreach (i => tasks ::= (url + i, restriction, author, content))
+      val tags = (n: Node) => for(tag <- (n \\ "a" filter hasRel("tag")) ) yield tag.text 
+      (1 to 2) foreach (i => {
+          val task = new Task(url + i, restriction, author, content, tags) 
+          temp_tasks ::= task
+      })
+      temp_tasks
     }
+
     def tasksNumber = tasks.length
 
     def act {
@@ -104,7 +117,6 @@ package pchel.quotesparser {
     }
 
     def main(args: Array[String]) {
-      createTasks()
       OutputActor.start
       this.start
     }
