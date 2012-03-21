@@ -1,9 +1,9 @@
 package pchel.planerizer
-
-class InfiniteField {
+import pchel.planerizer.InfiniteField.Coord
 import scala.collection.mutable.ArrayBuffer
 
-object Coord {
+object InfiniteField {
+  object Coord {
     implicit def tuple2coord(tuple : (Int, Int)) : Coord = new Coord(tuple._1, tuple._2)
     implicit def coord2tuple(coord : Coord) : (Int, Int) = (coord.x, coord.y)
 }
@@ -27,6 +27,7 @@ class Coord(_x : Int, _y : Int) {
   
   def x = _x
   def y = _y
+}
 }
 
 class InfiniteField[A] {
@@ -66,5 +67,27 @@ class InfiniteField[A] {
   def getDown(coord : Coord) : Option[A] = get(coord.down)
   def getLeft(coord : Coord) : Option[A] = get(coord.left)
   def getRight(coord : Coord) : Option[A] = get(coord.right)
-}
+  
+  def printPicture() {
+    var maxX = 0
+    var maxY = 0
+    var minX = 0
+    var minY = 0
+    
+    for(coord <- coordToIndex.keySet) {
+      if (coord.x>maxX) maxX = coord.x
+      if (coord.x<minX) minX = coord.x
+      if (coord.y>maxY) maxY = coord.y
+      if (coord.y<minY) minY = coord.y
+    }
+    
+    (minY to maxY) foreach(y => {
+      var line = ""
+      (minX to maxX) foreach(x => {
+        val s = if(coordToIndex.keySet contains (x,y)) "#" else " "
+        line += s
+      })
+      println(line)
+    })
+  }
 }

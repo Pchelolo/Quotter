@@ -1,11 +1,13 @@
 package pchel.quotesparser {
   import scala.collection.mutable.Queue
-  import scala.xml._
-  import java.net.{ URLConnection, URL }
-  import org.ccil.cowan.tagsoup.jaxp.SAXFactoryImpl
-  import scala.actors.Actor
-  import scala.util.matching.Regex
-  import pchel.planerizer.QuoteGraph
+import scala.xml._
+import java.net.{ URLConnection, URL }
+import org.ccil.cowan.tagsoup.jaxp.SAXFactoryImpl
+import scala.actors.Actor
+import scala.util.matching.Regex
+import pchel.planerizer.QuoteGraph
+import pchel.planerizer.GraphPlanerizer
+import scala.collection.mutable.ListBuffer
 
   abstract class ParserMessage
   case class ParseTask(data: Task) extends ParserMessage
@@ -37,8 +39,17 @@ package pchel.quotesparser {
 
     private def filterQuotes(task: Task): ParserMessage = {
        try {
+         println(task.url)
           val document = getDocument(task.url)
-          new ParserResult(for (element <- task.getBaseNode(document)) yield (task.getAuthor(element), task.getQuote(element), task.getTags(element)))
+          val resultsList = ListBuffer.empty[(String, String, Seq[String])]
+          for (element <- task.getBaseNode(document)) {
+            try {
+            	resultsList.append((task.getAuthor(element), task.getQuote(element), task.getTags(element)))
+            } catch {
+              case e : NoSuchElementException => //IGNORE
+            }
+          }
+          new ParserResult(resultsList)
         } catch {
           case e: java.net.UnknownHostException => new ParserError("Can`t reach host " + task.url)
         }
@@ -73,8 +84,9 @@ package pchel.quotesparser {
         receive {
           case ParserResult(quotesList) => for ( (author, quote, tags) <- quotesList.map(clear) if author.length + quote.length <= 137) g.addNode(author, quote, tags)
           case ParserError(message) => error(message)
-        })
-        println(g)
+       })
+       GraphPlanerizer.planerize(g).printPicture()
+       //for( (coord, quote) <- GraphPlanerizer.planerize(g).allPositions) println(coord +"     "+quote)
     }
   }
 
@@ -94,12 +106,12 @@ package pchel.quotesparser {
     private def createTasks() : List[Task]= {
       import filters._
       var temp_tasks = List.empty[Task]
-      val url = "http://citaty.info/rating/best?page="
+      val url = "http://citaty.info/book?page="
       val restriction = unite(hasClass("node-inner-3")_)_
       val author = (n: Node) => (n \\ "a").first.text
       val content = (n: Node) => (n \\ "p").first.text
       val tags = (n: Node) => for(tag <- (n \\ "a" filter hasRel("tag")) ) yield tag.text 
-      (1 to 2) foreach (i => {
+      (1 to 100) foreach (i => {
           val task = new Task(url + i, restriction, author, content, tags) 
           temp_tasks ::= task
       })

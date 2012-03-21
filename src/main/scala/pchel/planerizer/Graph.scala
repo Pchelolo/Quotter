@@ -1,11 +1,15 @@
 package pchel.planerizer {
 import scala.collection.mutable.HashSet
+import pchel.planerizer.InfiniteField.Coord
 
 abstract class QuoteNode {
   def relations : HashSet [ Edge ]
   def author : String
   def quote : String
   def nouns : Seq[String]
+  
+  def coord : Option[Coord]
+  def coord_= (coord : Coord)
 
   def addRelation(node : QuoteNode, weight : Int) : QuoteNode
   def findRelationWeight(that : QuoteNode) : Int
@@ -37,13 +41,18 @@ class QuoteGraph {
 private class QuoteNodeImpl(_author : String, _quote : String, _nouns : Seq[String]) extends QuoteNode {
   self : QuoteNode =>  
   private val _relations : HashSet[ Edge ] = HashSet.empty
+  private var _coord : Option[Coord] = None
   
   override def relations = _relations
   override def author = _author
   override def quote = _quote
   override def nouns = _nouns
+  
+  override def coord = _coord
+  override def coord_= (newCoord : Coord) {_coord = new Some(newCoord)}
+  
 
-  override def toString() = author+" : "+quote+" "+nouns+" - relations "+relations
+  override def toString() = author+" : "+quote+" "+nouns
   override def equals(that : Any) = that match {
     case other : QuoteNode => this.author.equals(other.author) && this.quote.equals(other.quote)
     case _ => false
@@ -89,6 +98,16 @@ private class QuoteNodeImpl(_author : String, _quote : String, _nouns : Seq[Stri
   
   def getNode(node : QuoteNode) : Option[QuoteNode] = nodes.findEntry(node)
   def getNode(author : String, quote : String) : Option[QuoteNode] = nodes.findEntry(new QuoteNodeImpl(author, quote, List.empty))
+  
+  def getWithMaxRelations : QuoteNode = {
+    var resultNode = nodes.first
+    var maxRelNumber = resultNode.relations.size
+    for(node <- nodes if (node.relations.size > maxRelNumber)) {
+        resultNode = node
+        maxRelNumber = resultNode.relations.size
+    }
+    resultNode
+  }
   
   override def toString() = (for(node <- nodes) yield "\n"+node.toString).toString
 }
