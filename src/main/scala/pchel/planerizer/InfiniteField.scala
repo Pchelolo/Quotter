@@ -83,7 +83,7 @@ class InfiniteField[A] {
     
     for(y <- (minY to maxY) ) {
       var line = ""
-      for(x <- (minX to maxX) ) if( coordToIndex.keySet contains (x,y) ) line += "#" else line += " "
+      for(x <- (minX to maxX) ) if(x == 0 && y == 0) line += "0" else if( coordToIndex.keySet contains (x,y) ) line += "#" else line += " "
       println(line)
     }
   }

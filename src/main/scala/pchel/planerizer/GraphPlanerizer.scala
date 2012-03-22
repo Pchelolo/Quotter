@@ -3,6 +3,8 @@ import scala.collection.mutable.HashSet
 import pchel.planerizer.InfiniteField._
 
 object GraphPlanerizer {
+
+  private def d(p1 : Coord, p2 : Coord) : Double = Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y,2)
   
 	def planerize(g : QuoteGraph) : InfiniteField[QuoteNode] = {
 		val field = new InfiniteField[QuoteNode]
@@ -13,7 +15,7 @@ object GraphPlanerizer {
 		toPut.add(g.getWithMaxRelations)
 		
 		while( toPut.size >0 ) {
-		  var minimumDistance = Int.MaxValue
+		  var minimumDistance = Double.MaxValue
 	      var quoteToPut = toPut.first
 		  var placeToPut = edge.first
 		  
@@ -27,7 +29,7 @@ object GraphPlanerizer {
 		  }
 		  
 		  for(place <- edge) {
-		    var distance = quoteToPut.relations.filter(_.quoteNode.coord != None).map(rel => ((place.x - rel.quoteNode.coord.get.x)^2 + (place.y - rel.quoteNode.coord.get.y)^2)*rel.weight).sum
+		    val distance = quoteToPut.relations.filter(_.quoteNode.coord != None).map(rel => d(place, rel.quoteNode.coord.get)*rel.weight).sum
 		    if(distance < minimumDistance || (distance == minimumDistance && Math.random < 0.3) ) {
 		      minimumDistance = distance
 		      placeToPut = place	        
