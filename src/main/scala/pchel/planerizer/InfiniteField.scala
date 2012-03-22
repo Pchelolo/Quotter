@@ -81,13 +81,10 @@ class InfiniteField[A] {
       if (coord.y<minY) minY = coord.y
     }
     
-    (minY to maxY) foreach(y => {
+    for(y <- (minY to maxY) ) {
       var line = ""
-      (minX to maxX) foreach(x => {
-        val s = if(coordToIndex.keySet contains (x,y)) "#" else " "
-        line += s
-      })
+      for(x <- (minX to maxX) ) if( coordToIndex.keySet contains (x,y) ) line += "#" else line += " "
       println(line)
-    })
+    }
   }
 }

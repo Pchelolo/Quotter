@@ -111,7 +111,7 @@ import scala.collection.mutable.ListBuffer
       val author = (n: Node) => (n \\ "a").first.text
       val content = (n: Node) => (n \\ "p").first.text
       val tags = (n: Node) => for(tag <- (n \\ "a" filter hasRel("tag")) ) yield tag.text 
-      (1 to 100) foreach (i => {
+      (1 to 500) foreach (i => {
           val task = new Task(url + i, restriction, author, content, tags) 
           temp_tasks ::= task
       })

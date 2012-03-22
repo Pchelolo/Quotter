@@ -14,30 +14,34 @@ object GraphPlanerizer {
 		
 		while( toPut.size >0 ) {
 		  var minimumDistance = Int.MaxValue
-	      var quoteToPut : Option[QuoteNode] = None
-		  var placeToPut : Option[Coord] = None
+	      var quoteToPut = toPut.first
+		  var placeToPut = edge.first
 		  
+		  var maxRelationsWeight = 0
 		  for(quote <- toPut) {
-		    for(place <- edge) {
-		      var distance = quote.relations.filter(_.quoteNode.coord != None).map(rel => ((place.x - rel.quoteNode.coord.get.x)^2 + (place.y - rel.quoteNode.coord.get.y)^2)*rel.weight).sum
-		      if(distance < minimumDistance) {
-		        minimumDistance = distance
-		        quoteToPut = new Some(quote)
-		        placeToPut = new Some(place)		        
-		      }
+		    var relWeight = quote.relations.filter(_.quoteNode.coord != None).map(rel => rel.weight).sum
+		    if(relWeight > maxRelationsWeight) {
+		      quoteToPut = quote
+		      maxRelationsWeight = relWeight
 		    }
 		  }
 		  
-		  field.put(quoteToPut.get, placeToPut.get)
-		  quoteToPut.get.coord = placeToPut.get
+		  for(place <- edge) {
+		    var distance = quoteToPut.relations.filter(_.quoteNode.coord != None).map(rel => ((place.x - rel.quoteNode.coord.get.x)^2 + (place.y - rel.quoteNode.coord.get.y)^2)*rel.weight).sum
+		    if(distance < minimumDistance || (distance == minimumDistance && Math.random < 0.3) ) {
+		      minimumDistance = distance
+		      placeToPut = place	        
+		    }
+		  }
 		  
-		  //println(placeToPut.get + "\n" + quoteToPut.get)
+		  field.put(quoteToPut, placeToPut)
+		  quoteToPut.coord = placeToPut
 		  
-		  toPut.remove(quoteToPut.get)
-		  for(newToPut <- quoteToPut.get.relations.filter(_.quoteNode.coord == None)map(_.quoteNode)) toPut.add(newToPut)
+		  toPut.remove(quoteToPut)
+		  for(newToPut <- quoteToPut.relations.filter(_.quoteNode.coord == None)map(_.quoteNode)) toPut.add(newToPut)
 		  
-		  edge.remove(placeToPut.get)
-		  for(newPlace <- field.getEmptyNeighbors(placeToPut.get)) edge.add(newPlace)
+		  edge.remove(placeToPut)
+		  for(newPlace <- field.getEmptyNeighbors(placeToPut)) edge.add(newPlace)
 		}
 		field
 	}
