@@ -8,6 +8,7 @@ import scala.util.matching.Regex
 import pchel.planerizer.QuoteGraph
 import pchel.planerizer.GraphPlanerizer
 import scala.collection.mutable.ListBuffer
+import pchel.planerizer.InfiniteField.Coord
 
   abstract class ParserMessage
   case class ParseTask(data: Task) extends ParserMessage
@@ -58,13 +59,18 @@ import scala.collection.mutable.ListBuffer
   object OutputActor extends Actor {
 
     private object MongoSerializer {
-      //import com.mongodb.casbah.Imports._
-      //import com.mongodb.casbah.MongoConnection
+      import com.mongodb.casbah.Imports._
+      import com.mongodb.casbah.MongoConnection
 
-      //private var storage = MongoConnection()("quotter")("quotes")
+      private val conn = MongoConnection()
+      private val storage = conn("quotter")("quotes")
 
-      def save(author: String, quote: String) {
-    	  //storage.insert(MongoDBObject("author" -> author, "quote" -> quote))	
+      def save(author: String, quote: String, tags : Seq[String], coord : Coord) {
+    	  storage.insert(MongoDBObject("author" -> author, "quote" -> quote, "tags" -> tags, "coord" -> MongoDBObject("x" -> coord.x, "y" -> coord.y) ))	
+      }
+      
+      def close {
+        conn.close()
       }
     }
 
@@ -84,9 +90,15 @@ import scala.collection.mutable.ListBuffer
           case ParserResult(quotesList) => for ( (author, quote, tags) <- quotesList.map(clear) if author.length + quote.length <= 137) g.addNode(author, quote, tags)
           case ParserError(message) => error(message)
        })
-       GraphPlanerizer.planerize(g).printPicture()
-       //for( (coord, quote) <- GraphPlanerizer.planerize(g).allPositions) println(coord +"     "+quote)
+       
+       try {
+    	   for( (coord, quote) <- GraphPlanerizer.planerize(g).allPositions) MongoSerializer.save(quote.author, quote.quote, quote.nouns, coord)
+       } finally {
+         MongoSerializer.close
+       }
+       
     }
+      
   }
 
   object Parser extends Actor {
