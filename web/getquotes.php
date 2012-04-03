@@ -5,8 +5,8 @@ if( !isset($_GET['coords'])  ) {
 	$return['error'] = true;
 	$return['msg'] = "Wrong parameters";
 	die();
-}
-*/
+}*/
+
 try {
 	$conn = new Mongo('localhost');
 	$db = $conn->quotter;
@@ -18,9 +18,11 @@ try {
 			$return['msg'] = "Wrong parameters";
 			die();
 		}
-		$quote = $collection->findOne( array('coord.x' => intval($coord['x']), 'coord.y' => intval($coord['y'])) );
+		$x = intval($coord['x']);
+		$y = intval($coord['y']);
+		$quote = $collection->findOne( array('coord.x' => $x, 'coord.y' => $y));
 		if( $quote !== NULL ) {
-			array_push($quotes, $quote);
+			array_push($quotes, array('x' => $x, 'y' => $y, 'quote' => $quote));
 		}
 	 	
 	}
